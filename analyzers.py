@@ -207,7 +207,7 @@ def analyze_style_and_artifacts(q5_code: str, history_codes: list) -> dict:
 
     # Identifier length mismatch
     def get_avg_id_length(code):
-        words = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', code)
+        
         kw = {'def','class','return','if','else','elif','for','in','while',
               'import','from','as','try','except','pass','and','or','not'}
         vars_only = [w for w in words if w not in kw]
@@ -467,7 +467,7 @@ def score_logic(code: str, test_results: list, reference_code: str) -> dict:
     code_lower = code.lower()
 
     # Has a function definition
-    has_def = bool(re.search(r'\bdef\s+\w+', code))
+   
     if has_def:
         algo_score += 5
         algo_reasons.append("+5: Solution is wrapped in a proper function definition.")
@@ -493,9 +493,7 @@ def score_logic(code: str, test_results: list, reference_code: str) -> dict:
 
     # Uses a hash map / dictionary for O(1) lookup
     has_map = "dict" in code_lower or "{}" in code or ": " in code and "map" in code_lower or \
-              bool(re.search(r'\w+\s*=\s*\{\}', code)) or \
-              bool(re.search(r'\w+\s*=\s*\{\s*\}', code)) or "char_map" in code_lower or \
-              "seen" in code_lower or "freq" in code_lower
+              
     if has_map:
         algo_score += 5
         algo_reasons.append("+5: Hash map used for O(1) character lookup — efficient choice.")
