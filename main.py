@@ -359,16 +359,7 @@ async def analyze_submission(payload: AnalyzeRequestSchema):
             logging.error(f"Database persistence failed: {db_err}", exc_info=True)
             attempt_id = -1 # Fallback for local stateless resilience if SQLite blocks
             
-        return {
-            "attempt_id": attempt_id,
-            "candidate_id": payload.candidate_id,
-            "similarity_score": similarity,
-            "velocity_analysis": velocity,
-            "style_analysis": style,
-            "interview_analysis": interview,
-            "humane_evaluation": humane,
-            "trust_graph": graph
-        }
+        
     except HTTPException:
         raise
     except Exception as e:
