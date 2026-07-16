@@ -1,5 +1,6 @@
 import os
 import time
+import hmac
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,7 +14,8 @@ if _env_path.exists():
             _k, _v = _line.split("=", 1)
             os.environ.setdefault(_k.strip(), _v.strip())
 from typing import List, Optional
-from fastapi import FastAPI, Request, HTTPException, Depends, status
+from fastapi import FastAPI, Request, HTTPException, Depends, status, Security
+from fastapi.security import APIKeyHeader
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -39,7 +41,7 @@ from database import (
     create_appeal,
     resolve_appeal,
     get_candidate_attempts,
-    get_attempt_detail
+    get_attempt_detail,
 )
 
 from voice_engine import (
@@ -223,6 +225,24 @@ def check_rate_limit(route_type: str):
             record["violation_count"] = max(0, record["violation_count"] - 1)
             
     return dependency
+
+
+# ----------------- REVIEWER AUTHORIZATION -----------------
+_admin_key_header = APIKeyHeader(name="X-Admin-Token", auto_error=False)
+
+def require_reviewer(token: str = Security(_admin_key_header)):
+    """
+    Enforces that the caller supplies a valid admin token.
+    Token is loaded from ADMIN_TOKEN env var — never hardcoded.
+    Returns 401 if header is missing, 403 if token is wrong.
+    """
+    expected = os.environ.get("ADMIN_TOKEN", "")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Reviewer auth not configured.")
+    if not token:
+        raise HTTPException(status_code=401, detail="X-Admin-Token header required.")
+    if not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=403, detail="Invalid admin token.")
 
 
 # ----------------- STRICT INPUT SCHEMA VALIDATION -----------------
@@ -447,14 +467,17 @@ async def post_appeal(attempt_id: int, payload: AppealRequest):
         logging.error(f"Appeal registration error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Appeal registration failed.")
 
-@app.post("/api/attempts/{attempt_id}/resolve-appeal", dependencies=[Depends(check_rate_limit("public"))])
-async def post_resolve_appeal(attempt_id: int, payload: ResolveAppealRequest):
+@app.post("/api/attempts/{attempt_id}/resolve-appeal", dependencies=[Depends(check_rate_limit("public")), Depends(require_reviewer)])
+async def post_resolve_appeal(attempt_id: int, payload: ResolveAppealRequest, request: Request):
     try:
         detail = get_attempt_detail(attempt_id)
         if not detail or not detail.get("appeal"):
             raise HTTPException(status_code=400, detail="No active appeal found for this attempt.")
-            
-        resolve_appeal(attempt_id, payload.status, payload.reviewer_note)
+        if detail["appeal"].get("status") != "pending":
+            raise HTTPException(status_code=409, detail="Appeal has already been resolved.")
+
+        reviewer_id = request.headers.get("X-Reviewer-Id", "unknown")[:100]
+        resolve_appeal(attempt_id, payload.status, payload.reviewer_note, reviewer_id)
         return {"status": "success", "message": f"Appeal resolved as {payload.status}."}
     except HTTPException:
         raise

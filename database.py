@@ -2,6 +2,7 @@ import sqlite3
 import json
 import os
 import logging
+from datetime import datetime, timezone
 
 DB_FILE = "system_siege.db"
 
@@ -79,6 +80,8 @@ def init_db():
             reason TEXT NOT NULL,
             status TEXT NOT NULL,
             reviewer_note TEXT,
+            resolved_by TEXT,
+            resolved_at TEXT,
             FOREIGN KEY (attempt_id) REFERENCES attempts(id)
         )
     """)
@@ -175,17 +178,17 @@ def create_appeal(attempt_id: int, reason: str):
     conn.commit()
     conn.close()
 
-def resolve_appeal(attempt_id: int, status_choice: str, note: str):
+def resolve_appeal(attempt_id: int, status_choice: str, note: str, resolved_by: str = "unknown"):
     """Updates appeal status and updates parent attempt risk profile accordingly."""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
-    # Save appeal state
+    resolved_at = datetime.now(timezone.utc).isoformat()
+
     cursor.execute("""
         UPDATE appeals 
-        SET status = ?, reviewer_note = ?
+        SET status = ?, reviewer_note = ?, resolved_by = ?, resolved_at = ?
         WHERE attempt_id = ?
-    """, (status_choice, note, attempt_id))
+    """, (status_choice, note, resolved_by, resolved_at, attempt_id))
     
     if status_choice == "resolved":
         # Reset risk elements
