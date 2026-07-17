@@ -1,0 +1,13 @@
+{
+  "name": "proctoriq",
+  "private": true,
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "server": "cd server && npm start",
+    "client": "cd client && npm run dev",
+    "dev": "npx concurrently -k -n SERVER,CLIENT -c green,cyan \"npm:server\" \"npm:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
