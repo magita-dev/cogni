@@ -98,25 +98,3 @@ secure-assess/
 No external services, API keys, or paid infrastructure required — everything (including
 the "AI" proctoring model) runs locally, which also means **candidate video never leaves
 their browser**.
-
-## Honest scope notes (for the judges / pitch)
-
-This is a hackathon-scale prototype demonstrating the core mechanics end-to-end, not a
-production system. Things that are simplified and would need real work to productize:
-- Code execution uses `child_process` with a timeout, not a hardened container/VM sandbox
-  (Docker/gVisor/Firecracker in production).
-- Only Python & JS are supported; adding Java/C++/C would mean adding compile steps.
-- Face detection uses a lightweight browser model (TinyFaceDetector) — production would
-  add gaze tracking, audio anomaly detection, and a full liveness check.
-- Auth now uses bcrypt-hashed passwords and JWTs issued on login/signup — production
-  would add refresh-token rotation, rate limiting on login attempts, and email
-  verification.
-- The plagiarism engine compares within one exam's submissions only; production would
-  also check against a historical corpus and public code repositories.
-
-## Suggested pitch narrative
-
-"Most online assessment tools tell a recruiter *what* score a candidate got. ProctorIQ
-tells them *how they got it* — a fully explainable trail from webcam signal to tab-switch
-count to code-similarity percentage, all the way to a single risk score with a visible
-breakdown, so a recruiter never has to trust a black box."
